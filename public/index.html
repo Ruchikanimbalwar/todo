@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>To-Do App</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; }
+    h1 { text-align: center; }
+    form { display: flex; gap: 8px; margin-bottom: 16px; }
+    input[type="text"] { flex: 1; padding: 8px; font-size: 16px; }
+    button { padding: 8px 12px; cursor: pointer; }
+    ul { list-style: none; padding: 0; }
+    li { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #ddd; }
+    li span { flex: 1; }
+    li.done span { text-decoration: line-through; color: #888; }
+  </style>
+</head>
+<body>
+  <h1>To-Do App</h1>
+  <form id="form">
+    <input type="text" id="title" placeholder="Add a task..." required />
+    <button type="submit">Add</button>
+  </form>
+  <ul id="list"></ul>
+
+  <script>
+    const list = document.getElementById("list");
+    const form = document.getElementById("form");
+    const titleInput = document.getElementById("title");
+
+    async function load() {
+      const res = await fetch("/api/todos");
+      const todos = await res.json();
+      list.innerHTML = "";
+      todos.forEach((t) => {
+        const li = document.createElement("li");
+        if (t.done) li.className = "done";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = t.done;
+        checkbox.onchange = async () => {
+          await fetch("/api/todos/" + t.id, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ done: checkbox.checked }),
+          });
+          load();
+        };
+
+        const span = document.createElement("span");
+        span.textContent = t.title;
+
+        const del = document.createElement("button");
+        del.textContent = "Delete";
+        del.onclick = async () => {
+          await fetch("/api/todos/" + t.id, { method: "DELETE" });
+          load();
+        };
+
+        li.append(checkbox, span, del);
+        list.appendChild(li);
+      });
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await fetch("/api/todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: titleInput.value }),
+      });
+      titleInput.value = "";
+      load();
+    });
+
+    load();
+  </script>
+</body>
+</html>
